@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 10, 10, 10;
+  --background-end-rgb: 26, 26, 26;
+  --electric-blue: 0, 247, 255;
+  --deep-purple: 109, 40, 217;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: radial-gradient(
+    circle at center,
+    rgb(var(--background-start-rgb)),
+    rgb(var(--background-end-rgb))
+  );
+  cursor: none;
+}
+
+.glassmorphism {
+  background: rgba(25, 25, 25, 0.4);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.gradient-text {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-[#00f7ff] to-[#6d28d9] animate-gradient;
+}
+
+.custom-cursor {
+  width: 2px;
+  height: 24px;
+  background: #00f7ff;
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  transition: all 0.1s ease;
+  transform-origin: center;
+}
+
+.custom-cursor::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1px;
+  height: 4px;
+  background: #00f7ff;
+}
+
+.custom-cursor::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1px;
+  height: 4px;
+  background: #00f7ff;
+}
+
+.custom-cursor.clickable {
+  background: #22c55e;
+}
+
+.custom-cursor.clickable::before,
+.custom-cursor.clickable::after {
+  background: #22c55e;
+}
+
+.custom-cursor.dragging {
+  background: #ef4444;
+}
+
+.custom-cursor.dragging::before,
+.custom-cursor.dragging::after {
+  background: #ef4444;
+}
+
+@keyframes gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient {
+  animation: gradient 3s ease infinite;
+  background-size: 200% 200%;
+}
+
+.stock-ticker .swiper-wrapper {
+  transition-timing-function: linear !important;
+}
+
+.stock-ticker .swiper-slide {
+  width: auto !important;
+}
+
+@media (max-width: 768px) {
+  body {
+    cursor: auto;
+  }
+}
