@@ -1,12 +1,12 @@
 "use client";
 
-import { motion } from 'framer-motion';
-import { DivideIcon as LucideIcon } from 'lucide-react';
+import { motion } from "framer-motion";
+import { DivideIcon, HomeIcon, StarIcon } from "lucide-react";
 
 interface FeatureCardProps {
   title: string;
   description: string;
-  icon: React.ElementType; 
+  icon: React.ElementType;
 }
 
 export const FeatureCard = ({ title, description, icon: Icon }: FeatureCardProps) => {
@@ -31,3 +31,41 @@ export const FeatureCard = ({ title, description, icon: Icon }: FeatureCardProps
     </motion.div>
   );
 };
+
+const features = [
+  {
+    title: "Divisão Inteligente",
+    description: "Automatize suas operações com nossa ferramenta avançada.",
+    icon: DivideIcon, 
+  },
+  {
+    title: "Home Seguro",
+    description: "Proteja suas informações com nosso sistema de segurança.",
+    icon: HomeIcon, 
+  },
+  {
+    title: "Estrelato",
+    description: "Destaque-se com os melhores recursos disponíveis.",
+    icon: StarIcon, 
+  },
+];
+
+export default function FeaturesSection() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className="grid grid-cols-1 md:grid-cols-3 gap-6"
+    >
+      {features.map((feature, index) => (
+        <FeatureCard
+          key={index}
+          title={feature.title}
+          description={feature.description}
+          icon={feature.icon}
+        />
+      ))}
+    </motion.div>
+  );
+}
