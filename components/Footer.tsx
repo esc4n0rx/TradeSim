@@ -53,7 +53,7 @@ export const Footer = () => {
           </div>
           
           <div className="text-center text-gray-400 text-sm">
-            <p>© 2024 TradeSim. Todos os direitos reservados.</p>
+            <p>© 2025 TradeSim. Todos os direitos reservados.</p>
             <p className="mt-1">Simulador de investimentos para fins educacionais.</p>
           </div>
         </div>

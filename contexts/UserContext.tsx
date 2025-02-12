@@ -4,6 +4,10 @@ import { createContext, useContext, useState, ReactNode } from "react";
 
 interface User {
   nome: string;
+  perfil_investidor: string;
+  cpf:number;
+  experiencia_investimento: string;
+  objetivo_investimento: string;
 }
 
 interface UserContextType {
