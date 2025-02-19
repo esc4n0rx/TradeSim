@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
+import coinList from "@/lib/coin.json";
 import { Footer } from "@/components/Footer";
 import { useUser } from "@/contexts/UserContext";
 import { useRouter } from "next/navigation";
@@ -18,19 +19,38 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Cria o cliente do Supabase
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-// Tipos para os ativos usados no modal de Ativos
-interface StockAsset {
-  symbol: string;
+
+export interface StockAsset {
+  stock: string; 
   name: string;
-  price: number;
-  change: string;
+  close: number; 
+  change: number; 
+  volume: number;
+  market_cap: number;
+  logo: string;
+  sector: string;
+  type: string;
 }
+
+export interface CryptoAsset {
+  coin: string;
+  coinName: string;
+  regularMarketPrice: number;
+  regularMarketChange: number;
+  regularMarketChangePercent: number;
+  regularMarketVolume: number;
+  marketCap: number;
+  coinImageUrl: string;
+  usedInterval: string;
+  usedRange: string;
+}
+
 
 interface FundAsset {
   symbol: string;
@@ -51,18 +71,13 @@ interface Assets {
   fixed: FixedAsset[];
 }
 
-// Componente Modal com transição suave
-function Modal({
-  isOpen,
-  onClose,
-  title,
-  children,
-}: {
+interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-}) {
+}
+function Modal({ isOpen, onClose, title, children }: ModalProps): JSX.Element {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -94,133 +109,329 @@ function Modal({
   );
 }
 
-// Conteúdo do modal de Ativos
-function AssetsContent() {
-  const [activeFilter, setActiveFilter] = useState<keyof Assets>("stocks");
-  const assets: Assets = {
-    stocks: [
-      { symbol: "PETR4", name: "Petrobras PN", price: 32.08, change: "+1.75%" },
-      { symbol: "VALE3", name: "Vale ON", price: 68.25, change: "-0.42%" },
-      { symbol: "ITUB4", name: "Itaú PN", price: 32.9, change: "+0.88%" },
-    ],
-    funds: [
-      { symbol: "HGLG11", name: "CGHG Logística", price: 160.5, change: "+0.32%" },
-      { symbol: "KNRI11", name: "Kinea Renda", price: 142.75, change: "-0.15%" },
-    ],
-    fixed: [
-      { name: "CDB Banco XYZ", rate: "12.5% a.a.", duration: "2 anos" },
-      { name: "Tesouro IPCA+", rate: "IPCA + 5.5%", duration: "2026" },
-    ],
-  };
+interface AssetsContentProps {
+  stocks: StockAsset[];
+  onBuy: (asset: StockAsset) => void;
+}
+function AssetsContent({ stocks, onBuy }: AssetsContentProps): JSX.Element {
+  const [selectedSector, setSelectedSector] = useState<string>("all");
+
+  const filteredStocks =
+    selectedSector === "all"
+      ? stocks
+      : stocks.filter(
+          (stock) => stock.sector.toLowerCase() === selectedSector.toLowerCase()
+        );
+
+  const sectors = Array.from(new Set(stocks.map((stock) => stock.sector))).sort();
 
   return (
     <div>
-      <div className="flex space-x-4 mb-6">
-        <button
-          onClick={() => setActiveFilter("stocks")}
-          className={`px-4 py-2 rounded-lg transition-colors ${
-            activeFilter === "stocks" ? "bg-cyan-400 text-black" : "bg-[#242424] text-gray-400"
-          }`}
+      <div className="mb-4">
+        <label className="text-gray-100 font-medium mr-2">Filtrar por setor:</label>
+        <select
+          value={selectedSector}
+          onChange={(e) => setSelectedSector(e.target.value)}
+          className="p-2 bg-[#242424] text-gray-100 border border-gray-600 rounded"
         >
-          Ações
-        </button>
-        <button
-          onClick={() => setActiveFilter("funds")}
-          className={`px-4 py-2 rounded-lg transition-colors ${
-            activeFilter === "funds" ? "bg-cyan-400 text-black" : "bg-[#242424] text-gray-400"
-          }`}
-        >
-          Fundos
-        </button>
-        <button
-          onClick={() => setActiveFilter("fixed")}
-          className={`px-4 py-2 rounded-lg transition-colors ${
-            activeFilter === "fixed" ? "bg-cyan-400 text-black" : "bg-[#242424] text-gray-400"
-          }`}
-        >
-          Renda Fixa
-        </button>
+          <option value="all">Todos</option>
+          {sectors.map((sector, index) => (
+            <option key={index} value={sector}>
+              {sector}
+            </option>
+          ))}
+        </select>
       </div>
-      <div className="space-y-4">
-        {activeFilter === "fixed"
-          ? assets.fixed.map((asset, index) => (
-              <div key={index} className="bg-[#242424] p-4 rounded-lg flex justify-between items-center">
+      <div className="max-h-96 overflow-y-auto space-y-4">
+        {filteredStocks.length > 0 ? (
+          filteredStocks.map((stock, index) => (
+            <div key={index} className="bg-[#242424] p-4 rounded-lg flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <img src={stock.logo} alt={stock.name} className="w-8 h-8" />
                 <div>
-                  <h3 className="font-medium text-gray-100">{asset.name}</h3>
-                  <p className="text-sm text-gray-400">Vencimento: {asset.duration}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium text-cyan-400">{asset.rate}</p>
-                </div>
-              </div>
-            ))
-          : assets[activeFilter].map((asset, index) => (
-              <div key={index} className="bg-[#242424] p-4 rounded-lg flex justify-between items-center">
-                <div>
-                  <h3 className="font-medium text-gray-100">{asset.symbol}</h3>
-                  <p className="text-sm text-gray-400">{asset.name}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium text-gray-100">R$ {asset.price.toFixed(2)}</p>
-                  <p className={`text-sm ${asset.change.startsWith("+") ? "text-green-400" : "text-red-400"}`}>
-                    {asset.change}
+                  <h3 className="font-medium text-gray-100">{stock.stock}</h3>
+                  <p className="text-sm text-gray-400">{stock.name}</p>
+                  <p className="text-xs text-gray-400">Setor: {stock.sector}</p>
+                  <p className="text-xs text-gray-400">
+                    Volume: {stock.volume ? stock.volume.toLocaleString("pt-BR") : "0"}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    Market Cap: R$ {(stock.market_cap ?? 0).toLocaleString("pt-BR")}
                   </p>
                 </div>
               </div>
-            ))}
+              <div className="flex flex-col items-end">
+                <p className="font-medium text-gray-100">R$ {stock.close.toFixed(2)}</p>
+                <p
+                  className={`text-sm ${
+                    stock.change > 0 ? "text-green-400" : stock.change < 0 ? "text-red-400" : "text-gray-400"
+                  }`}
+                >
+                  {stock.change.toFixed(2)}%
+                </p>
+                <button
+                  onClick={() => onBuy(stock)}
+                  className="mt-2 px-2 py-1 bg-cyan-400 text-black text-sm rounded hover:bg-cyan-500 transition-colors"
+                >
+                  Comprar
+                </button>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="text-gray-400">Nenhum ativo encontrado.</p>
+        )}
       </div>
     </div>
   );
 }
 
-// Conteúdo do modal de Criptomoedas
-function CryptoContent() {
-  const cryptos = [
-    { symbol: "BTC", name: "Bitcoin", price: 252480.5, change: "+2.3%" },
-    { symbol: "ETH", name: "Ethereum", price: 12750.75, change: "+1.8%" },
-    { symbol: "BNB", name: "Binance Coin", price: 1580.25, change: "-0.5%" },
-  ];
+interface CryptoAssetsContentProps {
+  onBuy: (asset: CryptoAsset) => void;
+}
+function CryptoAssetsContent({ onBuy }: CryptoAssetsContentProps): JSX.Element {
+  const [cryptoData, setCryptoData] = useState<CryptoAsset[]>([]);
+
+  useEffect(() => {
+    async function fetchCrypto() {
+      try {
+        const coins = coinList.coins.join(",");
+        const res = await fetch(
+          `https://brapi.dev/api/v2/crypto?coin=${coins}&currency=BRL&range=5d&interval=1d&token=${process.env.NEXT_PUBLIC_BRAPI_KEY}`
+        );
+        const data = await res.json();
+        console.log(data);
+        console.log(res);
+        if (data && data.coins) {
+          const mapped: CryptoAsset[] = data.coins.map((item: any) => ({
+            coin: item.coin,
+            coinName: item.coinName,
+            regularMarketPrice: Number(item.regularMarketPrice),
+            regularMarketChange: Number(item.regularMarketChange),
+            regularMarketChangePercent: Number(item.regularMarketChangePercent),
+            regularMarketVolume: Number(item.regularMarketVolume),
+            marketCap: Number(item.marketCap),
+            coinImageUrl: item.coinImageUrl,
+            usedInterval: item.usedInterval,
+            usedRange: item.usedRange,
+          }));
+          setCryptoData(mapped);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar dados de cripto:", error);
+      }
+    }
+    fetchCrypto();
+  }, []);
 
   return (
-    <div>
-      <div className="space-y-4">
-        {cryptos.map((crypto, index) => (
-          <div key={index} className="bg-[#242424] p-4 rounded-lg flex justify-between items-center">
-            <div>
-              <h3 className="font-medium text-gray-100">{crypto.symbol}</h3>
-              <p className="text-sm text-gray-400">{crypto.name}</p>
+    <div className="max-h-96 overflow-y-auto space-y-4">
+      {cryptoData.length > 0 ? (
+        cryptoData.map((crypto, index) => (
+          <div key={index} className="bg-[#242424] p-4 rounded-lg flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <img src={crypto.coinImageUrl} alt={crypto.coinName} className="w-8 h-8" />
+              <div>
+                <h3 className="font-medium text-gray-100">{crypto.coin}</h3>
+                <p className="text-sm text-gray-400">{crypto.coinName}</p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="font-medium text-gray-100">R$ {crypto.price.toFixed(2)}</p>
-              <p className={`text-sm ${crypto.change.startsWith("+") ? "text-green-400" : "text-red-400"}`}>
-                {crypto.change}
+            <div className="flex flex-col items-end">
+              <p className="font-medium text-gray-100">R$ {crypto.regularMarketPrice.toFixed(2)}</p>
+              <p
+                className={`text-sm ${
+                  crypto.regularMarketChange > 0
+                    ? "text-green-400"
+                    : crypto.regularMarketChange < 0
+                    ? "text-red-400"
+                    : "text-gray-400"
+                }`}
+              >
+                {crypto.regularMarketChange.toFixed(2)}%
               </p>
+              <p className="text-xs text-gray-400">
+                Market Cap: R$ {crypto.marketCap.toLocaleString("pt-BR")}
+              </p>
+              <p className="text-xs text-gray-400">
+                Volume: {crypto.regularMarketVolume.toLocaleString("pt-BR")}
+              </p>
+              <button
+                onClick={() => onBuy(crypto)}
+                className="mt-2 px-2 py-1 bg-cyan-400 text-black text-sm rounded hover:bg-cyan-500 transition-colors"
+              >
+                Comprar
+              </button>
             </div>
           </div>
-        ))}
-      </div>
+        ))
+      ) : (
+        <p className="text-gray-400">Nenhuma moeda encontrada.</p>
+      )}
     </div>
   );
 }
 
-// Conteúdo do modal de Day Trade
-function DaytradeContent() {
+// ─── DaytradeContent ─────────────────────────────
+function DaytradeContent(): JSX.Element {
   return (
     <div className="text-center py-12">
       <Clock className="w-12 h-12 text-cyan-400 mx-auto mb-4" />
-      <h3 className="text-xl font-bold mb-2">Em Desenvolvimento</h3>
+      <h3 className="text-xl font-bold mb-2">Day Trade</h3>
       <p className="text-gray-400">
-        O módulo de Day Trade está sendo implementado e estará disponível em breve.
+        O módulo de Day Trade está em desenvolvimento e em breve estará disponível.
       </p>
     </div>
   );
 }
 
-export default function Dashboard() {
-  const { user, setUser } = useUser();
+// ─── PurchaseModal para Ações ─────────────────────────────
+function PurchaseModal({
+  asset,
+  onClose,
+  onSuccess,
+}: {
+  asset: StockAsset;
+  onClose: () => void;
+  onSuccess: () => void;
+}): JSX.Element {
+  const { user } = useUser();
+  const [quantity, setQuantity] = useState<number>(1);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch("/api/finance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cpf: user?.cpf,
+          ativo: asset.stock,
+          categoria: "Ação",
+          quantidade: quantity,
+          valor_unitario: asset.close,
+        }),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        alert("Compra realizada com sucesso!");
+        onSuccess();
+        onClose();
+      } else {
+        alert("Erro na compra: " + result.error);
+      }
+    } catch (error: any) {
+      alert("Erro: " + error.message);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <Modal isOpen={true} onClose={onClose} title={`Comprar ${asset.stock}`}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <p>Preço atual: R$ {asset.close.toFixed(2)}</p>
+        </div>
+        <div>
+          <label className="block mb-2">Quantidade:</label>
+          <input
+            type="number"
+            min="1"
+            value={quantity}
+            onChange={(e) => setQuantity(Number(e.target.value))}
+            className="w-full p-2 rounded border border-gray-600 bg-[#242424] text-gray-100"
+            required
+          />
+        </div>
+        <button type="submit" className="px-4 py-2 bg-cyan-400 text-black rounded-lg">
+          {loading ? "Comprando..." : "Comprar"}
+        </button>
+      </form>
+    </Modal>
+  );
+}
+
+// ─── PurchaseModalCrypto: Modal para compra de Criptomoeda ─────────────────────────────
+function PurchaseModalCrypto({
+  asset,
+  onClose,
+  onSuccess,
+}: {
+  asset: CryptoAsset;
+  onClose: () => void;
+  onSuccess: () => void;
+}): JSX.Element {
+  const { user } = useUser();
+  const [quantity, setQuantity] = useState<number>(1);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch("/api/coin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cpf: user?.cpf,
+          ativo: asset.coin,
+          categoria: "Criptomoeda",
+          quantidade: quantity,
+          valor_unitario: asset.regularMarketPrice,
+        }),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        alert("Compra realizada com sucesso!");
+        onSuccess();
+        onClose();
+      } else {
+        alert("Erro na compra: " + result.error);
+      }
+    } catch (error: any) {
+      alert("Erro: " + error.message);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <Modal isOpen={true} onClose={onClose} title={`Comprar ${asset.coin}`}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <p>Preço atual: R$ {asset.regularMarketPrice.toFixed(2)}</p>
+          <p className="text-xs text-gray-400">
+            Market Cap: R$ {asset.marketCap.toLocaleString("pt-BR")}
+          </p>
+          <p className="text-xs text-gray-400">
+            Volume: {asset.regularMarketVolume.toLocaleString("pt-BR")}
+          </p>
+        </div>
+        <div>
+          <label className="block mb-2">Quantidade:</label>
+          <input
+            type="number"
+            min="1"
+            value={quantity}
+            onChange={(e) => setQuantity(Number(e.target.value))}
+            className="w-full p-2 rounded border border-gray-600 bg-[#242424] text-gray-100"
+            required
+          />
+        </div>
+        <button type="submit" className="px-4 py-2 bg-cyan-400 text-black rounded-lg">
+          {loading ? "Comprando..." : "Comprar"}
+        </button>
+      </form>
+    </Modal>
+  );
+}
+
+// ─── DASHBOARD ─────────────────────────────────────────────
+export default function Dashboard(): JSX.Element {
+  const { user } = useUser();
   const router = useRouter();
 
-  // Remove os dados mock: busca as informações reais da conta do usuário do Supabase
+
   const [accountInfo, setAccountInfo] = useState<{
     saldo_investido: number;
     saldo_disponivel: number;
@@ -232,8 +443,10 @@ export default function Dashboard() {
   const [marketData, setMarketData] = useState<
     Array<{ symbol: string; price: string; change: string; changeColor: string }>
   >([]);
+  const [stocksData, setStocksData] = useState<StockAsset[]>([]);
 
-  // Busca os dados reais da conta usando o CPF do usuário
+  const [selectedAsset, setSelectedAsset] = useState<StockAsset | CryptoAsset | null>(null);
+
   useEffect(() => {
     async function fetchAccountInfo() {
       if (user && user.cpf) {
@@ -264,7 +477,6 @@ export default function Dashboard() {
       try {
         const res = await fetch("https://api.hgbrasil.com/finance");
         const data = await res.json();
-        console.log(data);
         const currencies = data.results?.currencies;
         if (currencies) {
           const md = Object.keys(currencies)
@@ -287,9 +499,38 @@ export default function Dashboard() {
     fetchMarketData();
   }, []);
 
+  useEffect(() => {
+    async function fetchStocks() {
+      try {
+        const res = await fetch(
+          `https://brapi.dev/api/quote/list?type=stock&apikey=${process.env.NEXT_PUBLIC_BRAPI_KEY}`
+        );
+        const data = await res.json();
+        if (data && data.stocks) {
+          const stocks: StockAsset[] = data.stocks.map((item: any) => ({
+            stock: item.stock,
+            name: item.name,
+            close: item.close,
+            change: Number(item.change),
+            volume: item.volume,
+            market_cap: item.market_cap,
+            logo: item.logo,
+            sector: item.sector,
+            type: item.type,
+          }));
+          setStocksData(stocks);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar dados dos ativos:", error);
+      }
+    }
+    if (stocksData.length === 0) {
+      fetchStocks();
+    }
+  }, [stocksData]);
+
   return (
     <div className="min-h-screen bg-[#121212] text-gray-100">
-      {/* Top Navigation */}
       <nav className="bg-[#1a1a1a] border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -313,7 +554,6 @@ export default function Dashboard() {
         </div>
       </nav>
 
-      {/* Market Ticker */}
       <div className="bg-[#1a1a1a] border-b border-gray-800 py-2">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex space-x-8 overflow-x-auto">
@@ -331,7 +571,7 @@ export default function Dashboard() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Account Overview */}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {accountInfo ? (
             <>
@@ -377,7 +617,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Trading Options */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div
             onClick={() => setActiveModal("assets")}
@@ -413,7 +652,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Profile Info */}
         <div className="bg-[#1a1a1a] rounded-lg p-6 border border-gray-800 mt-8">
           <h2 className="text-xl font-bold mb-4">Seu Perfil de Investidor</h2>
           <div className="flex items-center space-x-4">
@@ -433,16 +671,92 @@ export default function Dashboard() {
         </div>
       </main>
 
-      {/* Modais com transição suave */}
-      <Modal isOpen={activeModal === "assets"} onClose={() => setActiveModal(null)} title="Ativos Disponíveis">
-        <AssetsContent />
+      <Modal
+        isOpen={activeModal === "assets"}
+        onClose={() => setActiveModal(null)}
+        title="Ativos Disponíveis"
+      >
+        <AssetsContent
+          stocks={stocksData}
+          onBuy={(asset) => {
+            setSelectedAsset(asset);
+            setActiveModal(null);
+          }}
+        />
       </Modal>
-      <Modal isOpen={activeModal === "daytrade"} onClose={() => setActiveModal(null)} title="Day Trade">
+      <Modal
+        isOpen={activeModal === "daytrade"}
+        onClose={() => setActiveModal(null)}
+        title="Day Trade"
+      >
         <DaytradeContent />
       </Modal>
-      <Modal isOpen={activeModal === "crypto"} onClose={() => setActiveModal(null)} title="Criptomoedas">
-        <CryptoContent />
+      <Modal
+        isOpen={activeModal === "crypto"}
+        onClose={() => setActiveModal(null)}
+        title="Criptomoedas"
+      >
+        <CryptoAssetsContent
+          onBuy={(asset) => {
+            setSelectedAsset(asset);
+            setActiveModal(null);
+          }}
+        />
       </Modal>
+
+      <AnimatePresence>
+        {selectedAsset && (
+          "coin" in selectedAsset ? (
+            <PurchaseModalCrypto
+              asset={selectedAsset as CryptoAsset}
+              onClose={() => setSelectedAsset(null)}
+              onSuccess={async () => {
+                if (user && user.cpf) {
+                  const { data, error } = await supabase
+                    .from("user_accounts")
+                    .select("*")
+                    .eq("cpf", user.cpf)
+                    .limit(1)
+                    .single();
+                  if (!error && data) {
+                    const saldo_total = Number(data.saldo_investido) + Number(data.saldo_disponivel);
+                    setAccountInfo({
+                      saldo_investido: Number(data.saldo_investido),
+                      saldo_disponivel: Number(data.saldo_disponivel),
+                      saldo_bloqueado: Number(data.saldo_bloqueado),
+                      saldo_total,
+                    });
+                  }
+                }
+              }}
+            />
+          ) : (
+            <PurchaseModal
+              asset={selectedAsset as StockAsset}
+              onClose={() => setSelectedAsset(null)}
+              onSuccess={async () => {
+                if (user && user.cpf) {
+                  const { data, error } = await supabase
+                    .from("user_accounts")
+                    .select("*")
+                    .eq("cpf", user.cpf)
+                    .limit(1)
+                    .single();
+                  if (!error && data) {
+                    const saldo_total = Number(data.saldo_investido) + Number(data.saldo_disponivel);
+                    setAccountInfo({
+                      saldo_investido: Number(data.saldo_investido),
+                      saldo_disponivel: Number(data.saldo_disponivel),
+                      saldo_bloqueado: Number(data.saldo_bloqueado),
+                      saldo_total,
+                    });
+                  }
+                }
+              }}
+            />
+          )
+        )}
+      </AnimatePresence>
 
       <Footer />
     </div>
